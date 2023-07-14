@@ -96,31 +96,56 @@ class TimeToTaskController extends Controller
     {
         //
     }
-    public function Report()
+    public function Report(Request $request)
     {
-
-        //$data = DB::table('projects')->join('time_to_tasks','projects.id','=','time_to_tasks.project_id')->groupBy('projects.id')->sum('hours');
-        $project = Project::get();
-        // dd($project);
-        $deliveries = $project->map(function($da) {
-            $project_name = $da->project_name;
-            $tasks = Task::where('project_id',$da->id)->get()->map(function($tsk) {
-                $task_time = TimeToTask::where('task_id', $tsk->id)->get()->sum('hours');
+            
+        if($request->search)
+        {
+            $searchTerm = $request->search;
+            $project = Project::where('project_name', 'LIKE', "%{$searchTerm}%")->get();
+            $report = $project->map(function($da) {
+                $project_name = $da->project_name;
+                $tasks = Task::where('project_id',$da->id)->get()->map(function($tsk) {
+                    $task_time = TimeToTask::where('task_id', $tsk->id)->get()->sum('hours');
+                    return [
+                        'task_name' => $tsk->task_name,
+                        'total_task_hour'=> $task_time
+                    ];
+                });  
                 return [
-                    'task_name' => $tsk->task_name,
-                    'total_task_hour'=> $task_time
+                    'projectName' => $project_name,
+                    'tasks' => $tasks,
+                    'total_hour' => $tasks->sum('total_task_hour')
                 ];
-            });  
-            return [
-                'projectName' => $project_name,
-                'tasks' => $tasks,
-                'total_hour' => $tasks->sum('total_task_hour')
-            ];
-        });    
-        return response()->json([
-            'success' => true,
-            'message' => 'Task Report Listed successfully',
-            'data' => $deliveries
-        ], Response::HTTP_OK);
+            }); 
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Task Report Listed successfully',
+                    'data' => $report
+                ], Response::HTTP_OK);
+        }
+        else{
+            $project = Project::get();
+            $report = $project->map(function($da) {
+                $project_name = $da->project_name;
+                $tasks = Task::where('project_id',$da->id)->get()->map(function($tsk) {
+                    $task_time = TimeToTask::where('task_id', $tsk->id)->get()->sum('hours');
+                    return [
+                        'task_name' => $tsk->task_name,
+                        'total_task_hour'=> $task_time
+                    ];
+                });  
+                return [
+                    'projectName' => $project_name,
+                    'tasks' => $tasks,
+                    'total_hour' => $tasks->sum('total_task_hour')
+                ];
+            });    
+            return response()->json([
+                'success' => true,
+                'message' => 'Task Report Listed successfully',
+                'data' => $report
+            ], Response::HTTP_OK);
+        }
     }
 }
